@@ -5,64 +5,110 @@ using System.Windows.Media.Imaging;
 
 namespace TicTacToe
 {
-    /// <summary>
-    /// Логика взаимодействия для MainWindow.xaml
-    /// </summary>
     public partial class MainWindow : Window
     {
         private bool isXTurn = true;
         private readonly string[] board = new string[9];
         private readonly BitmapImage cross;
         private readonly BitmapImage circle;
+        private int scoreX = 0;
+        private int scoreO = 0;
 
         public MainWindow()
         {
             InitializeComponent();
 
-            // загружаем изображения 
+            // Загрузка изображений
             var uriCross = new Uri("https://cdn1.iconfinder.com/data/icons/chunk-mini/16/X-1024.png ");
             var uriCircle = new Uri("https://sneg.top/uploads/posts/2023-04/1681161366_sneg-top-p-nolik-iz-fiksikov-kartinki-instagram-1.png ");
 
             cross = new BitmapImage(uriCross);
             circle = new BitmapImage(uriCircle);
 
-            // обработка ошибок загрузки 
+            // Обработка ошибок загрузки
             cross.DownloadFailed += (s, e) => MessageBox.Show("Ошибка загрузки крестика!");
             circle.DownloadFailed += (s, e) => MessageBox.Show("Ошибка загрузки нолика!");
+
+            txtStatus.Text = "Ходит: X";
+            UpdateScoreDisplay();
         }
 
         private void CellClicked(object sender, RoutedEventArgs e)
         {
-            var button = sender as Button;
-            int index = int.Parse(button.Tag?.ToString() ?? "0");
+            Button button = sender as Button;
+            if (button == null || button.Content != null) return;
 
-            if (board[index] != null || CheckWinner()) return;
+            int index = Convert.ToInt32(button.Tag);
 
-            if (isXTurn)
-            {
-                button.Content = new System.Windows.Controls.Image { Source = cross, Stretch = System.Windows.Media.Stretch.Uniform };
-                board[index] = "X";
-                txtStatus.Text = "Ходит: O";
-            }
-            else
-            {
-                button.Content = new System.Windows.Controls.Image { Source = circle, Stretch = System.Windows.Media.Stretch.Uniform };
-                board[index] = "O";
-                txtStatus.Text = "Ходит: X";
-            }
+            if (board[index] != null)
+                return;
 
-            isXTurn = !isXTurn;
+            board[index] = isXTurn ? "X" : "O";
+
+            Image image = new Image();
+            image.Source = isXTurn ? cross : circle;
+            image.Width = 50;
+            image.Height = 50;
+            image.VerticalAlignment = VerticalAlignment.Center;
+            image.HorizontalAlignment = HorizontalAlignment.Center;
+
+            button.Content = image;
 
             if (CheckWinner())
             {
-                string winner = isXTurn ? "O" : "X";
+                string winner = isXTurn ? "X" : "O";
                 txtStatus.Text = $"Победил: {winner}!";
-                DisableAllButtons();
+
+                if (winner == "X") scoreX++;
+                else scoreO++;
+
+                UpdateScoreDisplay();
+
+                AutoRestartGame();
             }
             else if (IsBoardFull())
             {
                 txtStatus.Text = "Ничья!";
+                AutoRestartGame();
             }
+            else
+            {
+                isXTurn = !isXTurn;
+                txtStatus.Text = $"Ходит: {(isXTurn ? "X" : "O")}";
+            }
+        }
+
+        private void AutoRestartGame()
+        {
+            Dispatcher.BeginInvoke(new Action(() =>
+            {
+                System.Threading.Thread.Sleep(1000); // 1 секунды задержки
+                RestartGame(null, null);
+            }), System.Windows.Threading.DispatcherPriority.ApplicationIdle);
+        }
+
+        private void RestartGame(object sender, RoutedEventArgs e)
+        {
+            Array.Clear(board, 0, board.Length);
+
+            foreach (var child in ((Grid)this.Content).Children)
+            {
+                if (child is Button btn && btn.Tag != null)
+                {
+                    btn.Content = null;
+                    btn.IsEnabled = true;
+                }
+            }
+
+            isXTurn = true;
+            txtStatus.Text = "Ходит: X";
+        }
+
+        private void ResetScore(object sender, RoutedEventArgs e)
+        {
+            scoreX = 0;
+            scoreO = 0;
+            UpdateScoreDisplay();
         }
 
         private bool CheckWinner()
@@ -91,18 +137,16 @@ namespace TicTacToe
         {
             foreach (var cell in board)
             {
-                if (cell == null) return false;
+                if (cell == null)
+                    return false;
             }
             return true;
         }
 
-        private void DisableAllButtons()
+        private void UpdateScoreDisplay()
         {
-            foreach (var child in ((Grid)this.Content).Children)
-            {
-                if (child is Button btn)
-                    btn.IsEnabled = false;
-            }
+            txtScoreX.Text = $"X: {scoreX}";
+            txtScoreO.Text = $"O: {scoreO}";
         }
     }
 }
