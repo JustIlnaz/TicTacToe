@@ -86,6 +86,7 @@ namespace TicTacToe
                 RestartGame(null, null);
             }), System.Windows.Threading.DispatcherPriority.ApplicationIdle);
         }
+        
 
         private void RestartGame(object sender, RoutedEventArgs e)
         {
